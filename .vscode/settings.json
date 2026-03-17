@@ -1,0 +1,71 @@
+{
+  // Disable the ESlint flat config support for ESLint 8.x compatibility
+  "eslint.experimental.useFlatConfig": false,
+  "files.exclude": {
+    "._*": true,
+    "**/._*": true,
+  },
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/.hg/store/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.git": true,
+    "**/.git/objects/**": true,
+    "**/.git/lfs/**": true,
+    "**/release-build": true
+  },
+  "terminal.integrated.defaultProfile.windows": "Git Bash",
+  "Codegeex.RepoIndex": true,
+  "editor.tabSize": 2,
+  "cSpell.words": [
+    "bybit",
+    "persistedstate",
+    "unplugin",
+    "vant"
+  ],
+  // Vue formatting settings for single attribute per line
+  "volar.format.initialIndent": {
+    "html": true
+  },
+  "vue.format.template.initialIndent": true,
+  "html.format.wrapAttributes": "force",
+  "html.format.wrapLineLength": 80,
+  "html.format.indentInnerHtml": true,
+  "html.format.preserveNewLines": false,
+  "html.format.maxPreserveNewLines": 1,
+  "html.format.wrapAttributesIndentSize": 2,
+  "html.format.endWithNewline": true,
+  "html.format.templating": true,
+  "volar.format.options": {
+    "tabSize": 2,
+    "useTabs": false,
+    "semi": false,
+    "singleQuote": true,
+    "htmlWhitespaceSensitivity": "ignore",
+    "singleAttributePerLine": true,
+    "bracketSameLine": false,
+    "vueIndentScriptAndStyle": true,
+    "bracketSpacing": true
+  },
+  "volar.format.template": {
+    "singleAttributePerLine": true,
+    "closingBracketSameLine": false
+  },
+  "Codegeex.CommitMessageStyle": "ConventionalCommits",
+  "Codegeex.CommitMessage.LanguagePreference": "中文",
+  // Git performance and stability settings
+  "git.autofetch": false,
+  "git.confirmSync": false,
+  "git.ignoreLegacyWarning": true,
+  "cmake.sourceDirectory": "E:/ProjectCode/cssc-node-view/code_gen/tests/test_runner",
+  "Codegeex.CompletionDelay": 3,
+  "Codegeex.Chat.fontSize": 12,
+  "livePreview.defaultPreviewPath": "/cache/14/index.html",
+  "cmake.ignoreCMakeListsMissing": true,
+}

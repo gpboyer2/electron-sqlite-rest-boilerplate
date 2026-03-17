@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+out/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Custom
+.qoder/
+.opencode/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Electron
+release/
+
+# Test
+coverage/
+
+# Temp
+*.tmp
+*.temp
+
+# Cache
+cache/

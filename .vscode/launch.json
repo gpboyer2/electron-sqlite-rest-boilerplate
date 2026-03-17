@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Electron Dev",
+      "command": "cd electron-sqlite-rest-boilerplate && npm run dev",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "name": "Electron Build",
+      "command": "cd electron-sqlite-rest-boilerplate && npm run build",
+      "request": "launch",
+      "type": "node-terminal"
+    },
+    {
+      "name": "Chrome MCP (remote debug)",
+      "command": "\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug",
+      "request": "launch",
+      "type": "node-terminal"
+    }
+  ]
+}

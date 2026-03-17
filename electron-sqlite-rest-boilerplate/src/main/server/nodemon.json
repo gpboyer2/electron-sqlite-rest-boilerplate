@@ -1,0 +1,7 @@
+{
+  "watch": ["."],
+  "ext": "js,json",
+  "ignore": ["logs/*", "data/*", "node_modules/*", "test/*", "dist/*"],
+  "exec": "node server.js",
+  "exitCrash": true
+}

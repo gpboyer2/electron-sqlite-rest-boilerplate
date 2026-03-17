@@ -1,0 +1,146 @@
+[
+  {
+    "id": "packet_edge_001",
+    "name": "边界情况测试协议",
+    "description": "边界情况测试协议，侧重于字节序混合、内存对齐、贪婪读取模式及特殊保留字段",
+    "hierarchy_node_id": "测试节点",
+    "protocol": "udp",
+    "status": "enabled",
+    "fieldCount": 6,
+    "updatedAt": "2024/11/28",
+    "version": "2.0",
+    "defaultByteOrder": "little",
+    "structAlignment": 1,
+    "_mock": true,
+    "fields": [
+      {
+        "id": "field_edge_001_01",
+        "type": "Struct",
+        "field_name": "meta",
+        "description": "元数据头部",
+        "is_required": true,
+        "fields": [
+          {
+            "id": "field_edge_001_01_01",
+            "type": "UnsignedInt",
+            "field_name": "syncWord",
+            "description": "大端序同步字 (0x12345678)，测试局部字节序覆写",
+            "byte_length": 4,
+            "default_value": 305419896,
+            "default_byte_order": "big",
+            "display_format": "hex",
+            "is_required": true,
+            "level": 1,
+            "parent_id": "field_edge_001_01"
+          },
+          {
+            "id": "field_edge_001_01_02",
+            "type": "UnsignedInt",
+            "field_name": "packetSize",
+            "description": "包总长度，用于贪婪读取计算",
+            "byte_length": 2,
+            "display_format": "decimal",
+            "is_required": true,
+            "level": 1,
+            "parent_id": "field_edge_001_01"
+          },
+          {
+            "id": "field_edge_001_01_03",
+            "type": "MessageId",
+            "field_name": "msgId",
+            "description": "报文标识符",
+            "byte_length": 2,
+            "value_type": "UnsignedInt",
+            "message_id_value": 256,
+            "is_required": true,
+            "level": 1,
+            "parent_id": "field_edge_001_01"
+          }
+        ],
+        "expanded": false
+      },
+      {
+        "id": "field_edge_001_02",
+        "type": "Array",
+        "field_name": "calibMatrix",
+        "description": "3x3 校准矩阵，测试固定长度数组",
+        "count": 9,
+        "is_required": true,
+        "element": {
+          "type": "Float",
+          "field_name": "val",
+          "precision": "float",
+          "default_value": 1.0
+        },
+        "expanded": false
+      },
+      {
+        "id": "field_edge_001_03",
+        "type": "Bitfield",
+        "field_name": "compStatus",
+        "description": "紧凑位域测试",
+        "byte_length": 1,
+        "is_required": true,
+        "sub_fields": [
+          {
+            "name": "errA",
+            "start_bit": 0,
+            "end_bit": 0
+          },
+          {
+            "name": "errB",
+            "start_bit": 1,
+            "end_bit": 2
+          },
+          {
+            "name": "mode",
+            "start_bit": 3,
+            "end_bit": 6
+          },
+          {
+            "name": "flag",
+            "start_bit": 7,
+            "end_bit": 7
+          }
+        ]
+      },
+      {
+        "id": "field_edge_001_04",
+        "type": "Reserved",
+        "field_name": "rsvd",
+        "description": "保留字段填充测试",
+        "byte_length": 3,
+        "fill_value": "FF",
+        "is_required": false
+      },
+      {
+        "id": "field_edge_001_05",
+        "type": "Array",
+        "field_name": "rawData",
+        "description": "贪婪读取数组：读取直到剩下2个字节（CRC）",
+        "bytes_in_trailer": 2,
+        "is_required": true,
+        "element": {
+          "type": "UnsignedInt",
+          "field_name": "byte",
+          "byte_length": 1
+        },
+        "expanded": false
+      },
+      {
+        "id": "field_edge_001_06",
+        "type": "Checksum",
+        "field_name": "crc",
+        "description": "CRC16，测试小端序校验和",
+        "algorithm": "crc16-modbus",
+        "byte_length": 2,
+        "range_start_ref": "meta",
+        "range_end_ref": "rawData",
+        "parameters": {
+          "byte_order": "little"
+        },
+        "is_required": true
+      }
+    ]
+  }
+]
