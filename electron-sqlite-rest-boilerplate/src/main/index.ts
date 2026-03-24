@@ -846,6 +846,150 @@ async function createBackup(data: unknown): Promise<void> {
 
 let mainWindow: BrowserWindow | null = null
 
+type EmbeddedApiInfo = {
+  mode: 'http'
+  initializing: boolean
+  host: string
+  port: number
+  baseUrl: string
+  serverEntry: string
+  databasePath: string
+  logDir: string
+  running: boolean
+  lastError: string | null
+  startedAt: string | null
+}
+
+type EmbeddedServerModule = {
+  startServer: () => Promise<void> | void
+  stopServer?: () => Promise<void> | void
+  httpServer?: {
+    listening?: boolean
+  }
+}
+
+const EMBEDDED_API_HOST = '127.0.0.1'
+const EMBEDDED_API_PORT = 9200
+
+let embeddedServerModule: EmbeddedServerModule | null = null
+let embeddedApiLastError: string | null = null
+let embeddedApiInitializing = false
+let embeddedApiStartedAt: string | null = null
+let embeddedApiRuntime: {
+  serverEntry: string
+  databasePath: string
+  logDir: string
+} | null = null
+
+function getEmbeddedApiInfo(running = false): EmbeddedApiInfo {
+  const baseUrl = `http://${EMBEDDED_API_HOST}:${EMBEDDED_API_PORT}`
+  const serverEntry = embeddedApiRuntime?.serverEntry || getEmbeddedServerEntryPath()
+
+  return {
+    mode: 'http',
+    initializing: embeddedApiInitializing,
+    host: EMBEDDED_API_HOST,
+    port: EMBEDDED_API_PORT,
+    baseUrl,
+    serverEntry,
+    databasePath: embeddedApiRuntime?.databasePath || '',
+    logDir: embeddedApiRuntime?.logDir || '',
+    running,
+    lastError: embeddedApiLastError,
+    startedAt: embeddedApiStartedAt
+  }
+}
+
+async function ensureEmbeddedApiRuntime(): Promise<{ dbPath: string; logDir: string }> {
+  const fs = await import('fs/promises')
+  const runtimeRoot = join(app.getPath('userData'), 'embedded-api')
+  const dataDir = join(runtimeRoot, 'data')
+  const logDir = join(runtimeRoot, 'logs')
+
+  await fs.mkdir(dataDir, { recursive: true })
+  await fs.mkdir(logDir, { recursive: true })
+
+  return {
+    dbPath: join(dataDir, 'electron-sqlite-rest.db'),
+    logDir
+  }
+}
+
+function getEmbeddedServerEntryPath(): string {
+  return app.isPackaged
+    ? join(app.getAppPath(), 'out', 'main', 'server', 'server.js')
+    : join(app.getAppPath(), 'src', 'main', 'server', 'server.js')
+}
+
+async function checkEmbeddedApiHealth(): Promise<boolean> {
+  try {
+    const response = await fetch(`http://${EMBEDDED_API_HOST}:${EMBEDDED_API_PORT}/api/health`)
+    if (!response.ok) {
+      return false
+    }
+
+    const payload = (await response.json()) as {
+      status?: string
+      datum?: {
+        status?: string
+      }
+    }
+
+    return payload.status === 'success' && payload.datum?.status === 'healthy'
+  } catch {
+    return false
+  }
+}
+
+async function startEmbeddedApiServer(): Promise<EmbeddedApiInfo> {
+  embeddedApiInitializing = true
+  try {
+    const { dbPath, logDir } = await ensureEmbeddedApiRuntime()
+    const serverEntryPath = getEmbeddedServerEntryPath()
+    embeddedApiRuntime = {
+      serverEntry: serverEntryPath,
+      databasePath: dbPath,
+      logDir
+    }
+
+    process.env.ELECTRON_EMBEDDED = 'true'
+    process.env.VITE_API_HOST = EMBEDDED_API_HOST
+    process.env.VITE_API_PORT = String(EMBEDDED_API_PORT)
+    process.env.DATABASE_PATH = dbPath
+    process.env.LOG_DIR = logDir
+
+    if (!embeddedServerModule) {
+      // 服务端保留 CommonJS，运行时直接挂载到 Electron 主进程。
+      embeddedServerModule = require(serverEntryPath) as EmbeddedServerModule
+    }
+
+    await embeddedServerModule.startServer()
+
+    const running = await checkEmbeddedApiHealth()
+    embeddedApiLastError = running ? null : 'Embedded API health check failed'
+    embeddedApiStartedAt = running ? new Date().toISOString() : null
+
+    return getEmbeddedApiInfo(running)
+  } catch (error) {
+    embeddedApiLastError =
+      error instanceof Error ? error.message : 'Failed to start embedded REST API'
+    embeddedApiStartedAt = null
+    console.error('[EmbeddedApi] Failed to start:', error)
+    return getEmbeddedApiInfo(false)
+  } finally {
+    embeddedApiInitializing = false
+  }
+}
+
+async function getEmbeddedApiStatus(): Promise<EmbeddedApiInfo> {
+  const running = await checkEmbeddedApiHealth()
+  if (running) {
+    embeddedApiLastError = null
+  }
+
+  return getEmbeddedApiInfo(running)
+}
+
 // ============ 托盘相关变量 ============
 let traySettings: TraySettings = { ...defaultTraySettings }
 let isQuitting = false // 标记是否真正退出应用
@@ -1257,6 +1401,25 @@ app.whenReady().then(async () => {
   // IPC: 获取应用版本
   ipcMain.handle('get-app-version', () => {
     return app.getVersion()
+  })
+
+  // IPC: 获取内置 REST API 信息
+  ipcMain.handle('embedded-api:get-info', async () => {
+    return await getEmbeddedApiStatus()
+  })
+
+  // IPC: 获取内置 REST API 状态
+  ipcMain.handle('embedded-api:get-status', async () => {
+    return await getEmbeddedApiStatus()
+  })
+
+  // IPC: 手动启动/重试内置 REST API
+  ipcMain.handle('embedded-api:start', async () => {
+    return await startEmbeddedApiServer()
+  })
+
+  ipcMain.handle('get-embedded-api-status', () => {
+    return getEmbeddedApiStatus()
   })
 
   // IPC: 检查更新
@@ -3691,6 +3854,8 @@ app.whenReady().then(async () => {
     }
   }
 
+  await startEmbeddedApiServer()
+
   createWindow()
 
   app.on('activate', function () {
@@ -3772,6 +3937,7 @@ app.on('will-quit', async (event) => {
       flushStoreWrites()
       store.set('accountData', lastSavedData)
       await createBackup(lastSavedData)
+      await embeddedServerModule?.stopServer?.()
       console.log('[Exit] Data saved successfully')
     } catch (error) {
       console.error('[Exit] Failed to save data:', error)
@@ -3781,6 +3947,7 @@ app.on('will-quit', async (event) => {
     unregisterProtocol()
     app.exit(0)
   } else {
+    await embeddedServerModule?.stopServer?.()
     unregisterProtocol()
   }
 })

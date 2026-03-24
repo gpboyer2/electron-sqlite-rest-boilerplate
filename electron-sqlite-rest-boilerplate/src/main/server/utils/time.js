@@ -6,7 +6,25 @@
  * @since 2025-11-28
  */
 
-const moment = require('moment');
+function pad(value) {
+  return String(value).padStart(2, '0')
+}
+
+function formatDate(date, format) {
+  const replacements = {
+    YYYY: String(date.getFullYear()),
+    MM: pad(date.getMonth() + 1),
+    DD: pad(date.getDate()),
+    HH: pad(date.getHours()),
+    mm: pad(date.getMinutes()),
+    ss: pad(date.getSeconds())
+  }
+
+  return Object.entries(replacements).reduce(
+    (result, [token, value]) => result.replaceAll(token, value),
+    format
+  )
+}
 
 /**
  * 获取当前格式化的时间字符串
@@ -14,7 +32,7 @@ const moment = require('moment');
  * @returns {string} 格式化后的时间字符串
  */
 function getCurrentDateTime(_format = 'YYYY-MM-DD HH:mm:ss') {
-  return moment().format(_format);
+  return formatDate(new Date(), _format)
 }
 
 /**
@@ -22,7 +40,7 @@ function getCurrentDateTime(_format = 'YYYY-MM-DD HH:mm:ss') {
  * @returns {number} 当前时间的毫秒时间戳
  */
 function getTimeStampMS() {
-  return new Date().getTime();
+  return new Date().getTime()
 }
 
 /**
@@ -30,11 +48,11 @@ function getTimeStampMS() {
  * @returns {number} 当前时间的秒级时间戳（Unix 时间戳）
  */
 function getTimeStamp() {
-  return Math.round(new Date().getTime() / 1000);
+  return Math.round(new Date().getTime() / 1000)
 }
 
 module.exports = {
   getCurrentDateTime,
   getTimeStampMS,
   getTimeStamp
-};
+}

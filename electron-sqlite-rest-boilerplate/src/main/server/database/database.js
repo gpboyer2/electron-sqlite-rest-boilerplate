@@ -44,16 +44,13 @@ if (!fs.existsSync(dataDir)) {
  * 【强制约束】必须使用 better-sqlite3 创建数据库连接
  * 禁止使用：sequelize, sqlite3, knex 等其他库
  */
-const db = new Database(dbPath);
+const db = new Database(dbPath, isDev ? { verbose: console.log } : undefined);
 
 // 启用 WAL 模式提升并发性能
 db.pragma('journal_mode = WAL');
 
 // 禁用外键约束
 db.pragma('foreign_keys = OFF');
-
-// 打印 SQL 语句（仅开发环境）
-db.pragma('verbose', isDev ? console.log : null);
 
 /**
  * 初始化数据库表结构

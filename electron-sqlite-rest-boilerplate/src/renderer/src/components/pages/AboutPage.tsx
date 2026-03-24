@@ -15,13 +15,22 @@ import {
   CheckCircle,
   AlertCircle,
   Info,
-  Zap
+  Zap,
+  Save,
+  Server
 } from 'lucide-react'
 import appLogo from '@/assets/app-logo.png'
 import groupQR from '@/assets/lark-group-qr.jpg'
 import authorAvatar from '@/assets/author-avatar.png'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/hooks/useTranslation'
+import {
+  getAbout,
+  getEmbeddedApiStatus,
+  updateAbout,
+  type AboutRecord,
+  type EmbeddedApiInfo
+} from '@/services/rest-api'
 
 interface UpdateInfo {
   hasUpdate: boolean
@@ -41,6 +50,16 @@ interface UpdateInfo {
 
 export function AboutPage() {
   const [version, setVersion] = useState('...')
+  const [aboutForm, setAboutForm] = useState<AboutRecord>({
+    app_name: '',
+    version: '',
+    description: '',
+    author: '',
+    license: ''
+  })
+  const [apiInfo, setApiInfo] = useState<EmbeddedApiInfo | null>(null)
+  const [aboutError, setAboutError] = useState<string | null>(null)
+  const [savingAbout, setSavingAbout] = useState(false)
   const [showGroupQR, setShowGroupQR] = useState(false)
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
@@ -51,6 +70,14 @@ export function AboutPage() {
 
   useEffect(() => {
     window.api.getAppVersion().then(setVersion)
+    getEmbeddedApiStatus()
+      .then(setApiInfo)
+      .catch(() => null)
+    getAbout()
+      .then(setAboutForm)
+      .catch((error) => {
+        setAboutError(error instanceof Error ? error.message : '加载关于信息失败')
+      })
     // 不自动检查更新，避免 GitHub API 速率限制
     // 用户可以手动点击"检查更新"按钮
   }, [])
@@ -80,6 +107,20 @@ export function AboutPage() {
     if (bytes < 1024) return bytes + ' B'
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+  }
+
+  const saveAboutInfo = async () => {
+    setSavingAbout(true)
+    try {
+      await updateAbout(aboutForm)
+      const latest = await getAbout()
+      setAboutForm(latest)
+      setAboutError(null)
+    } catch (error) {
+      setAboutError(error instanceof Error ? error.message : '保存关于信息失败')
+    } finally {
+      setSavingAbout(false)
+    }
   }
 
   return (
@@ -298,6 +339,90 @@ export function AboutPage() {
         </div>
       )}
 
+      <Card className="border-primary/20 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Server className="h-4 w-4 text-primary" />
+            </div>
+            {isEn ? 'About API Demo' : '关于接口演示'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="text-muted-foreground">
+              {isEn ? 'REST API status' : 'REST API 状态'}
+            </span>
+            <span
+              className={cn(
+                'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold',
+                apiInfo?.running
+                  ? 'bg-green-500/10 text-green-600'
+                  : 'bg-muted text-muted-foreground'
+              )}
+            >
+              {apiInfo?.running ? 'Online' : 'Offline'}
+            </span>
+            <span className="text-muted-foreground">
+              {apiInfo ? `${apiInfo.baseUrl}/api` : '--'}
+            </span>
+          </div>
+
+          {aboutError && <div className="text-sm text-destructive">{aboutError}</div>}
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            <InputField
+              label={isEn ? 'App name' : '应用名称'}
+              value={aboutForm.app_name}
+              onChange={(value) => setAboutForm((current) => ({ ...current, app_name: value }))}
+            />
+            <InputField
+              label={isEn ? 'Template version' : '模板版本'}
+              value={aboutForm.version}
+              onChange={(value) => setAboutForm((current) => ({ ...current, version: value }))}
+            />
+            <InputField
+              label={isEn ? 'Author' : '作者'}
+              value={aboutForm.author}
+              onChange={(value) => setAboutForm((current) => ({ ...current, author: value }))}
+            />
+            <InputField
+              label={isEn ? 'License' : '许可证'}
+              value={aboutForm.license}
+              onChange={(value) => setAboutForm((current) => ({ ...current, license: value }))}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-sm font-medium">{isEn ? 'Description' : '说明'}</div>
+            <textarea
+              className="min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
+              value={aboutForm.description}
+              onChange={(event) =>
+                setAboutForm((current) => ({ ...current, description: event.target.value }))
+              }
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              className="gap-2"
+              onClick={saveAboutInfo}
+              disabled={savingAbout || !apiInfo?.running}
+            >
+              <Save className="h-4 w-4" />
+              {savingAbout
+                ? isEn
+                  ? 'Saving...'
+                  : '保存中...'
+                : isEn
+                  ? 'Save to /api/about/update'
+                  : '保存到 /api/about/update'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Description */}
       <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
         <CardHeader className="pb-2">
@@ -484,5 +609,26 @@ export function AboutPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+function InputField({
+  label,
+  value,
+  onChange
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <label className="space-y-2">
+      <div className="text-sm font-medium">{label}</div>
+      <input
+        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
   )
 }

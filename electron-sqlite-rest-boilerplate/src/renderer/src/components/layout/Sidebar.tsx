@@ -1,8 +1,11 @@
-import { Home, Settings, Info, ChevronLeft, ChevronRight, Activity } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Home, Settings, Info, ChevronLeft, ChevronRight, Activity, Server } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import appLogo from '@/assets/app-logo.png'
 import appLogoSmall from '@/assets/app-logo.png'
 import { useTranslation } from '@/hooks/useTranslation'
+import { Badge } from '@/components/ui/badge'
+import { getEmbeddedApiStatus, type EmbeddedApiInfo } from '@/services/rest-api'
 
 export type PageType = 'home' | 'processes' | 'settings' | 'about'
 
@@ -22,6 +25,28 @@ const menuItemsConfig: { id: PageType; labelKey: string; icon: React.ElementType
 
 export function Sidebar({ currentPage, onPageChange, collapsed, onToggleCollapse }: SidebarProps) {
   const { t } = useTranslation()
+  const [apiInfo, setApiInfo] = useState<EmbeddedApiInfo | null>(null)
+
+  useEffect(() => {
+    let disposed = false
+
+    const refreshStatus = async () => {
+      const nextStatus = await getEmbeddedApiStatus()
+      if (!disposed) {
+        setApiInfo(nextStatus)
+      }
+    }
+
+    void refreshStatus()
+    const timer = window.setInterval(() => {
+      void refreshStatus()
+    }, 15000)
+
+    return () => {
+      disposed = true
+      window.clearInterval(timer)
+    }
+  }, [])
 
   return (
     <div
@@ -73,6 +98,36 @@ export function Sidebar({ currentPage, onPageChange, collapsed, onToggleCollapse
           )
         })}
       </nav>
+
+      <div className="px-2 pb-2">
+        <div
+          className={cn(
+            'rounded-lg border bg-muted/30 text-xs text-muted-foreground',
+            collapsed ? 'px-2 py-3 flex justify-center' : 'px-3 py-2.5 space-y-2'
+          )}
+        >
+          {collapsed ? (
+            <Badge variant={apiInfo?.running ? 'success' : 'outline'} className="px-1.5 py-1">
+              <Server className="h-3.5 w-3.5" />
+            </Badge>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Server className="h-4 w-4" />
+                  <span>REST API</span>
+                </div>
+                <Badge variant={apiInfo?.running ? 'success' : 'outline'}>
+                  {apiInfo?.running ? 'Online' : 'Offline'}
+                </Badge>
+              </div>
+              <div className="truncate">
+                {apiInfo ? `${apiInfo.host}:${apiInfo.port}` : '127.0.0.1:9200'}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Collapse Toggle */}
       <div className="p-2 border-t">

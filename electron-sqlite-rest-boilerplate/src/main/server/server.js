@@ -11,29 +11,30 @@
  * - 关于接口（/api/about）
  */
 
-const path = require('path');
+const path = require('path')
 
 // 加载环境变量（必须在所有其他 require 之前）
-const nodeEnv = process.env.NODE_ENV || 'development';
-const envFile = nodeEnv === 'test' ? '.env.test' : '.env';
-require('dotenv').config({ path: path.join(__dirname, `../${envFile}`) });
+const nodeEnv = process.env.NODE_ENV || 'development'
+const envFile = nodeEnv === 'test' ? '.env.test' : '.env'
+require('dotenv').config({ path: path.join(__dirname, `../${envFile}`) })
 
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const favicon = require('serve-favicon');
+const express = require('express')
+const bodyParser = require('body-parser')
+const cors = require('cors')
+const favicon = require('serve-favicon')
 
 // 引入日志模块
-const log4js = require('./middleware/log4jsPlus');
-const logger = log4js.getLogger('default');
+const log4js = require('./middleware/log4jsPlus')
+const logger = log4js.getLogger('default')
+const isEmbedded = process.env.ELECTRON_EMBEDDED === 'true'
 
 /**
  * 【强制约束】必须使用 better-sqlite3 创建数据库连接
  * 禁止使用：sequelize, sqlite3, knex 等其他库
  */
-const { testConnection, closeDatabase } = require('./database/database');
+const { testConnection, closeDatabase } = require('./database/database')
 
-const app = express();
+const app = express()
 
 // CORS 配置：允许所有来源
 app.use(
@@ -43,23 +44,24 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
     credentials: false
   })
-);
+)
 
-app.use(favicon(path.join(__dirname, 'favicon.ico')));
+app.use(favicon(path.join(__dirname, 'favicon.ico')))
 
 // 引入中间件
-const accessHandler = require('./middleware/accessLogger');
-const errorHandler = require('./middleware/errorLogger');
-const responseFormatMiddleware = require('./middleware/response');
+const accessHandler = require('./middleware/accessLogger')
+const errorHandler = require('./middleware/errorLogger')
+const responseFormatMiddleware = require('./middleware/response')
 
 // HTTP 服务器
-const http = require('http');
-const httpServer = http.Server(app);
+const http = require('http')
+const httpServer = http.Server(app)
 
 // 配置
-const { VITE_API_HOST, VITE_API_PORT } = require('./etc/config');
+const { VITE_API_HOST, VITE_API_PORT } = require('./etc/config')
 
-const apiPrefix = '/api';
+const apiPrefix = '/api'
+let startupPromise = null
 
 // 路由配置表：路径前缀、路由模块、描述
 const routeConfigList = [
@@ -69,87 +71,134 @@ const routeConfigList = [
   { prefix: '/process', router: require('./routes/processRouter'), desc: '进程管理接口' },
   { prefix: '/settings', router: require('./routes/settingsRouter'), desc: '设置接口' },
   { prefix: '/about', router: require('./routes/aboutRouter'), desc: '关于接口' }
-];
+]
 
 // 全局中间件
-app.use(bodyParser.json());
-app.use(responseFormatMiddleware);
-app.use(accessHandler);
+app.use(bodyParser.json())
+app.use(responseFormatMiddleware)
+app.use(accessHandler)
 
 // 注册路由
 routeConfigList.forEach(({ prefix, router }) => {
-  app.use(apiPrefix + prefix, router);
-});
+  app.use(apiPrefix + prefix, router)
+})
 
 // 错误处理中间件（放在最后，捕获所有路由的错误）
-app.use(errorHandler);
+app.use(errorHandler)
 
 /**
  * 启动服务器
  */
 async function startServer() {
-  try {
-    // 测试数据库连接
-    testConnection();
-
-    // 启动 HTTP 服务器
-    httpServer.listen(VITE_API_PORT, VITE_API_HOST, function () {
-      const nodeEnv = process.env.NODE_ENV || 'development';
-      const envDisplay = nodeEnv === 'test' ? '*** 测试环境 (TEST) ***' : nodeEnv;
-      logger.info(`========================================`);
-      logger.info(`运行环境: ${envDisplay}`);
-      logger.info(`========================================`);
-      logger.info(`HTTP 服务(${VITE_API_HOST}:${VITE_API_PORT}) 启动成功`);
-    });
-
-    // 延迟输出服务信息
-    setTimeout(() => {
-      logger.info('========================================');
-      logger.info('REST API 服务器启动完成');
-      logger.info(`HTTP API 服务: http://localhost:${VITE_API_PORT}`);
-      logger.info('========================================');
-      logger.info('可用接口路由:');
-      // 动态输出路由配置
-      const maxPrefixLen = Math.max(...routeConfigList.map((r) => r.prefix.length));
-      routeConfigList.forEach(({ prefix, desc }) => {
-        logger.info(`   ${prefix.padEnd(maxPrefixLen + 2)} - ${desc}`);
-      });
-      logger.info('========================================');
-    }, 1000);
-  } catch (error) {
-    logger.error('服务器初始化失败:', error);
-    process.exit(1);
+  if (httpServer.listening) {
+    return
   }
+
+  if (startupPromise) {
+    return startupPromise
+  }
+
+  try {
+    startupPromise = (async () => {
+      // 测试数据库连接
+      testConnection()
+
+      await new Promise((resolve, reject) => {
+        const onError = (error) => {
+          httpServer.off('listening', onListening)
+          reject(error)
+        }
+
+        const onListening = () => {
+          httpServer.off('error', onError)
+          resolve()
+        }
+
+        httpServer.once('error', onError)
+        httpServer.once('listening', onListening)
+        httpServer.listen(VITE_API_PORT, VITE_API_HOST)
+      })
+
+      const nodeEnv = process.env.NODE_ENV || 'development'
+      const envDisplay = nodeEnv === 'test' ? '*** 测试环境 (TEST) ***' : nodeEnv
+      logger.info(`========================================`)
+      logger.info(`运行环境: ${envDisplay}`)
+      logger.info(`========================================`)
+      logger.info(`HTTP 服务(${VITE_API_HOST}:${VITE_API_PORT}) 启动成功`)
+
+      // 延迟输出服务信息
+      setTimeout(() => {
+        logger.info('========================================')
+        logger.info('REST API 服务器启动完成')
+        logger.info(`HTTP API 服务: http://localhost:${VITE_API_PORT}`)
+        logger.info('========================================')
+        logger.info('可用接口路由:')
+        const maxPrefixLen = Math.max(...routeConfigList.map((r) => r.prefix.length))
+        routeConfigList.forEach(({ prefix, desc }) => {
+          logger.info(`   ${prefix.padEnd(maxPrefixLen + 2)} - ${desc}`)
+        })
+        logger.info('========================================')
+      }, 1000)
+    })()
+
+    await startupPromise
+  } catch (error) {
+    startupPromise = null
+    logger.error('服务器初始化失败:', error)
+    if (isEmbedded) {
+      throw error
+    }
+
+    process.exit(1)
+  }
+}
+
+async function stopServer() {
+  if (!httpServer.listening) {
+    closeDatabase()
+    return
+  }
+
+  await new Promise((resolve) => {
+    httpServer.close(() => {
+      logger.info('HTTP 服务器已关闭')
+      resolve()
+    })
+  })
+
+  closeDatabase()
+  startupPromise = null
 }
 
 /**
  * 优雅关闭处理函数
  */
 function gracefulShutdown(signal) {
-  logger.info(`收到 ${signal} 信号，开始优雅关闭...`);
+  logger.info(`收到 ${signal} 信号，开始优雅关闭...`)
 
   // 关闭 HTTP 服务器
   httpServer.close(() => {
-    logger.info('HTTP 服务器已关闭');
-  });
+    logger.info('HTTP 服务器已关闭')
+  })
 
   // 关闭数据库连接（使用 better-sqlite3）
-  closeDatabase();
+  closeDatabase()
 
   // 强制退出超时（5秒后强制退出）
   setTimeout(() => {
-    logger.error('优雅关闭超时，强制退出');
-    process.exit(1);
-  }, 5000);
+    logger.error('优雅关闭超时，强制退出')
+    process.exit(1)
+  }, 5000)
 }
 
 // 监听进程退出信号
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+process.on('SIGINT', () => gracefulShutdown('SIGINT'))
 
 // 导出启动函数（供 Electron 主进程调用）
 module.exports = {
   startServer,
+  stopServer,
   app,
   httpServer
-};
+}

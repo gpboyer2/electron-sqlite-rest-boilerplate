@@ -32,6 +32,57 @@ const api = {
     return ipcRenderer.invoke('get-app-version')
   },
 
+  // 获取内置 REST API 信息
+  getEmbeddedApiInfo: (): Promise<{
+    mode: 'http'
+    initializing: boolean
+    host: string
+    port: number
+    baseUrl: string
+    serverEntry: string
+    databasePath: string
+    logDir: string
+    running: boolean
+    lastError: string | null
+    startedAt: string | null
+  }> => {
+    return ipcRenderer.invoke('embedded-api:get-info')
+  },
+
+  // 获取内置 REST API 状态
+  getEmbeddedApiStatus: (): Promise<{
+    mode: 'http'
+    initializing: boolean
+    host: string
+    port: number
+    baseUrl: string
+    serverEntry: string
+    databasePath: string
+    logDir: string
+    running: boolean
+    lastError: string | null
+    startedAt: string | null
+  }> => {
+    return ipcRenderer.invoke('embedded-api:get-status')
+  },
+
+  // 手动启动或重试启动内置 REST API
+  startEmbeddedApi: (): Promise<{
+    mode: 'http'
+    initializing: boolean
+    host: string
+    port: number
+    baseUrl: string
+    serverEntry: string
+    databasePath: string
+    logDir: string
+    running: boolean
+    lastError: string | null
+    startedAt: string | null
+  }> => {
+    return ipcRenderer.invoke('embedded-api:start')
+  },
+
   // 监听 OAuth 回调
   onAuthCallback: (callback: (data: { code: string; state: string }) => void): (() => void) => {
     const handler = (

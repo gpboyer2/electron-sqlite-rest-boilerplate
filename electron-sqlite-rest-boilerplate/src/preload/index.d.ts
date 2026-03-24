@@ -3,6 +3,45 @@ import { ElectronAPI } from '@electron-toolkit/preload'
 interface AppApi {
   openExternal: (url: string, usePrivateMode?: boolean) => void
   getAppVersion: () => Promise<string>
+  getEmbeddedApiInfo: () => Promise<{
+    mode: 'http'
+    running: boolean
+    initializing: boolean
+    host: string
+    port: number
+    baseUrl: string
+    serverEntry: string
+    databasePath: string
+    logDir: string
+    lastError?: string
+    startedAt?: string
+  }>
+  getEmbeddedApiStatus: () => Promise<{
+    mode: 'http'
+    running: boolean
+    initializing: boolean
+    host: string
+    port: number
+    baseUrl: string
+    serverEntry: string
+    databasePath: string
+    logDir: string
+    lastError?: string
+    startedAt?: string
+  }>
+  startEmbeddedApi: () => Promise<{
+    mode: 'http'
+    running: boolean
+    initializing: boolean
+    host: string
+    port: number
+    baseUrl: string
+    serverEntry: string
+    databasePath: string
+    logDir: string
+    lastError?: string
+    startedAt?: string
+  }>
   onAuthCallback: (callback: (data: { code: string; state: string }) => void) => () => void
 
   // 文件操作
