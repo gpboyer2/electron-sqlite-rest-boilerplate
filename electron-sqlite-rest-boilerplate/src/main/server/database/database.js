@@ -33,13 +33,14 @@ const logger = log4js.getLogger('default');
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const isDev = NODE_ENV !== 'production';
 const isTest = NODE_ENV === 'test';
+const defaultRuntimeRoot = path.resolve(__dirname, '../../../../.runtime/embedded-api');
 
 let dbPath;
 if (process.env.DATABASE_PATH) {
   dbPath = process.env.DATABASE_PATH;
 } else {
   const dbFileName = isTest ? 'electron-boilerplate-test.db' : 'electron-boilerplate.db';
-  dbPath = path.join(__dirname, '../data', dbFileName);
+  dbPath = path.join(defaultRuntimeRoot, 'storage', dbFileName);
 }
 
 const dataDir = path.dirname(dbPath);

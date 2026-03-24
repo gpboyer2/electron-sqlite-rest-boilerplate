@@ -3,6 +3,7 @@ import { autoUpdater } from 'electron-updater'
 import * as machineIdModule from './machineId'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { existsSync } from 'fs'
 import { writeFile, readFile } from 'fs/promises'
 import { encode, decode } from 'cbor-x'
 import icon from '../../resources/icon.png?asset'
@@ -19,9 +20,19 @@ import {
 // ============ 应用名称配置 ============
 app.setName('Electron SQLite REST')
 
+const userDataOverride = process.env.ELECTRON_USER_DATA_DIR
+if (userDataOverride) {
+  app.setPath('userData', userDataOverride)
+  console.log('[Runtime] userData overridden to:', userDataOverride)
+}
+
 // ============ 自动更新配置 ============
 autoUpdater.autoDownload = false
 autoUpdater.autoInstallOnAppQuit = true
+
+function hasAutoUpdateConfig(): boolean {
+  return existsSync(join(process.resourcesPath, 'app-update.yml'))
+}
 
 function setupAutoUpdater(): void {
   // 检查更新出错
@@ -903,14 +914,14 @@ function getEmbeddedApiInfo(running = false): EmbeddedApiInfo {
 async function ensureEmbeddedApiRuntime(): Promise<{ dbPath: string; logDir: string }> {
   const fs = await import('fs/promises')
   const runtimeRoot = join(app.getPath('userData'), 'embedded-api')
-  const dataDir = join(runtimeRoot, 'data')
+  const storageDir = join(runtimeRoot, 'storage')
   const logDir = join(runtimeRoot, 'logs')
 
-  await fs.mkdir(dataDir, { recursive: true })
+  await fs.mkdir(storageDir, { recursive: true })
   await fs.mkdir(logDir, { recursive: true })
 
   return {
-    dbPath: join(dataDir, 'electron-sqlite-rest.db'),
+    dbPath: join(storageDir, 'electron-sqlite-rest.db'),
     logDir
   }
 }
@@ -1121,7 +1132,7 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     autoHideMenuBar: true,
-    icon,
+    ...(process.platform === 'darwin' ? {} : { icon }),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -1261,7 +1272,7 @@ app.whenReady().then(async () => {
     const { nativeImage } = await import('electron')
     // 生产环境使用 icns，开发环境使用 png（electron-vite 开发模式不支持直接加载 icns）
     const dockIconPath = app.isPackaged
-      ? join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'AppIcon.icns')
+      ? join(process.resourcesPath, 'icon.icns')
       : join(__dirname, '../../resources/icon.png')
     const dockIcon = nativeImage.createFromPath(dockIconPath)
     if (!dockIcon.isEmpty()) {
@@ -1275,11 +1286,15 @@ app.whenReady().then(async () => {
 
   // 初始化自动更新（仅生产环境）
   if (!is.dev) {
-    setupAutoUpdater()
-    // 启动后延迟检查更新
-    setTimeout(() => {
-      autoUpdater.checkForUpdates().catch(console.error)
-    }, 3000)
+    if (hasAutoUpdateConfig()) {
+      setupAutoUpdater()
+      // 启动后延迟检查更新
+      setTimeout(() => {
+        autoUpdater.checkForUpdates().catch(console.error)
+      }, 3000)
+    } else {
+      console.log('[AutoUpdater] app-update.yml not found, skipping startup update check')
+    }
   }
 
   // Set app user model id for windows
@@ -1426,6 +1441,9 @@ app.whenReady().then(async () => {
   ipcMain.handle('check-for-updates', async () => {
     if (is.dev) {
       return { hasUpdate: false, message: '开发环境不支持更新检查' }
+    }
+    if (!hasAutoUpdateConfig()) {
+      return { hasUpdate: false, message: '未配置自动更新源（缺少 app-update.yml）' }
     }
     try {
       const result = await autoUpdater.checkForUpdates()

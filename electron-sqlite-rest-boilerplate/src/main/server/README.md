@@ -24,7 +24,6 @@ src/main/server/
 │   │   ├── service.js
 │   │   └── repository.js
 │   └── index.js
-├── data/               # runtime-created SQLite files
 ├── etc/                # environment-based config
 ├── utils/              # shared helpers
 └── server.js           # Express bootstrap
@@ -75,6 +74,7 @@ Then register it in `src/main/server/modules/index.js`.
 - `scripts/copy-server.cjs` copies `src/main/server/` into `out/main/server/`
 - Electron packaged builds run the copied server from `out/main/server/server.js`
 - The active runtime path is `server.js -> modules/index.js`
-- `data/` and `logs/` are created at runtime when needed
+- Development runtime files are created under project root `.runtime/embedded-api/`
+- Packaged builds write DB/logs under Electron `userData/embedded-api/`
 - `drizzle.config.js` points Drizzle Kit at `src/main/server/database/schema.js`
 - `src/main/server/database/migrations/` is copied into packaged builds and applied automatically on startup

@@ -26,10 +26,6 @@ function shouldCopy(sourcePath) {
     return false
   }
 
-  if (relativePath.startsWith(`data${path.sep}exports${path.sep}`)) {
-    return false
-  }
-
   return !/\.db($|[._-])/.test(relativePath)
 }
 

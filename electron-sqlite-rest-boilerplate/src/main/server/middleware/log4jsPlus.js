@@ -5,14 +5,15 @@ const fs = require('fs');
 const { getCurrentDateTime } = require('../utils/time');
 
 const YYYY_MM_DD = getCurrentDateTime('YYYY-MM-DD');
+const DEFAULT_RUNTIME_ROOT = path.resolve(__dirname, '../../../../.runtime/embedded-api');
+const DEFAULT_LOG_DIR = path.join(DEFAULT_RUNTIME_ROOT, 'logs');
 
-// 确定日志目录：pkg 环境使用环境变量，否则使用相对路径
-const isPkg = process.pkg && typeof process.pkg.entrypoint === 'string';
-const LOG_DIR = isPkg ? process.env.LOG_DIR : path.join(__dirname, '../logs');
+// 确定日志目录：打包运行走主进程注入目录；开发态写到项目根的 .runtime 下
+const LOG_DIR = process.env.LOG_DIR || DEFAULT_LOG_DIR;
 const log_dir = path.join(LOG_DIR, YYYY_MM_DD);
 
-// 确保日志目录存在（只在非 pkg 环境或使用可写目录时）
-if (!isPkg || LOG_DIR !== path.join(__dirname, '../logs')) {
+// 确保日志目录存在
+if (LOG_DIR) {
   if (!fs.existsSync(log_dir)) {
     fs.mkdirSync(log_dir, { recursive: true });
   }
