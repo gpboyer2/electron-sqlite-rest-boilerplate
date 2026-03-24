@@ -928,8 +928,8 @@ async function ensureEmbeddedApiRuntime(): Promise<{ dbPath: string; logDir: str
 
 function getEmbeddedServerEntryPath(): string {
   return app.isPackaged
-    ? join(app.getAppPath(), 'out', 'main', 'server', 'server.js')
-    : join(app.getAppPath(), 'src', 'main', 'server', 'server.js')
+    ? join(app.getAppPath(), 'out', 'main', 'server', 'app.js')
+    : join(app.getAppPath(), 'src', 'main', 'server', 'app.js')
 }
 
 async function checkEmbeddedApiHealth(): Promise<boolean> {
