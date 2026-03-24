@@ -112,6 +112,58 @@ export interface AboutInfo {
 
 export type AboutRecord = AboutInfo
 
+export interface TemplateAuthUser {
+  id: number
+  username: string
+  realName: string
+  email: string
+  role: {
+    id: number
+    code: string
+    name: string
+  }
+  permissions: string[]
+}
+
+export interface AuthPublicSummary {
+  authMode: string
+  demoAccounts: Array<{
+    username: string
+    password: string
+    role: string
+  }>
+  roles: Array<{
+    id: number
+    name: string
+    code: string
+    description: string
+  }>
+  permissions: Array<{
+    id: number
+    name: string
+    code: string
+    description: string
+  }>
+  users: Array<{
+    id: number
+    username: string
+    realName: string
+    role: {
+      code: string
+      name: string
+    }
+  }>
+  protectedRoute: string
+}
+
+export interface AuthLoginResult {
+  accessToken: string
+  refreshToken: string
+  expiresIn: number
+  refreshExpiresIn: number
+  user: TemplateAuthUser
+}
+
 interface PaginatedResponse<T> {
   list: T[]
   pagination: { current_page: number; page_size: number; total: number }
@@ -222,7 +274,50 @@ export const templateApi = {
     post('/api/settings/delete', { data: keys }),
   getAboutInfo: (): Promise<AboutInfo> => request('/api/about/query'),
   updateAboutInfo: (payload: Partial<AboutInfo>): Promise<{ changes?: number; id?: number }> =>
-    post('/api/about/update', payload)
+    post('/api/about/update', payload),
+  getAuthPublicSummary: (): Promise<AuthPublicSummary> => request('/api/auth/public-summary'),
+  registerTemplateUser: (payload: {
+    username: string
+    password: string
+    realName?: string
+    email?: string
+  }): Promise<{ username: string; role: string }> => post('/api/auth/register', payload),
+  loginTemplateUser: (payload: {
+    username: string
+    password: string
+  }): Promise<AuthLoginResult> => post('/api/auth/login', payload),
+  refreshTemplateUser: (refreshToken: string): Promise<AuthLoginResult> =>
+    post('/api/auth/refresh', { refreshToken }),
+  getTemplateMe: (accessToken: string): Promise<TemplateAuthUser> =>
+    request('/api/auth/me', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    }),
+  logoutTemplateUser: (accessToken: string): Promise<null> =>
+    postWithAuth('/api/auth/logout', accessToken),
+  getProtectedTemplateExample: (accessToken: string): Promise<{
+    message: string
+    currentUser: TemplateAuthUser
+    hint: string
+  }> => requestWithAuth('/api/auth/protected-example', accessToken)
+}
+
+function requestWithAuth<T>(path: string, accessToken: string, init?: RequestInit): Promise<T> {
+  return request<T>(path, {
+    ...init,
+    headers: {
+      ...(init?.headers ?? {}),
+      Authorization: `Bearer ${accessToken}`
+    }
+  })
+}
+
+function postWithAuth<T>(path: string, accessToken: string, body?: unknown): Promise<T> {
+  return requestWithAuth<T>(path, accessToken, {
+    method: 'POST',
+    body: body === undefined ? undefined : JSON.stringify(body)
+  })
 }
 
 export const getHealth = templateApi.getHealth

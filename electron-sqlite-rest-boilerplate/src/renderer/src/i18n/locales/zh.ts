@@ -42,9 +42,9 @@ const zh = {
 
   // 导航
   nav: {
-    home: '主页',
-    processes: '进程',
-    settings: '设置',
+    home: '仪表盘',
+    processes: 'CRUD 示例',
+    auth: '认证示例',
     about: '关于'
   },
 

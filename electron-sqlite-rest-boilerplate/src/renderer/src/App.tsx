@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Sidebar, type PageType } from './components/layout'
-import { HomePage, AboutPage, SettingsPage, ProcessesPage } from './components/pages'
+import { HomePage, AboutPage, ProcessesPage, AuthDemoPage } from './components/pages'
 import { UpdateDialog } from './components/UpdateDialog'
 import { CloseConfirmDialog } from './components/CloseConfirmDialog'
 
@@ -14,8 +14,8 @@ function App(): React.JSX.Element {
         return <HomePage />
       case 'processes':
         return <ProcessesPage />
-      case 'settings':
-        return <SettingsPage />
+      case 'auth':
+        return <AuthDemoPage />
       case 'about':
         return <AboutPage />
       default:

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Home, Settings, Info, ChevronLeft, ChevronRight, Activity, Server } from 'lucide-react'
+import { Home, Info, ChevronLeft, ChevronRight, Activity, Server, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import appLogo from '@/assets/app-logo.png'
 import appLogoSmall from '@/assets/app-logo.png'
@@ -7,7 +7,7 @@ import { useTranslation } from '@/hooks/useTranslation'
 import { Badge } from '@/components/ui/badge'
 import { getEmbeddedApiStatus, type EmbeddedApiInfo } from '@/services/rest-api'
 
-export type PageType = 'home' | 'processes' | 'settings' | 'about'
+export type PageType = 'home' | 'processes' | 'auth' | 'about'
 
 interface SidebarProps {
   currentPage: PageType
@@ -19,7 +19,7 @@ interface SidebarProps {
 const menuItemsConfig: { id: PageType; labelKey: string; icon: React.ElementType }[] = [
   { id: 'home', labelKey: 'nav.home', icon: Home },
   { id: 'processes', labelKey: 'nav.processes', icon: Activity },
-  { id: 'settings', labelKey: 'nav.settings', icon: Settings },
+  { id: 'auth', labelKey: 'nav.auth', icon: ShieldCheck },
   { id: 'about', labelKey: 'nav.about', icon: Info }
 ]
 
@@ -31,9 +31,24 @@ export function Sidebar({ currentPage, onPageChange, collapsed, onToggleCollapse
     let disposed = false
 
     const refreshStatus = async () => {
-      const nextStatus = await getEmbeddedApiStatus()
-      if (!disposed) {
-        setApiInfo(nextStatus)
+      try {
+        const nextStatus = await getEmbeddedApiStatus()
+        if (!disposed) {
+          setApiInfo(nextStatus)
+        }
+      } catch (error) {
+        if (!disposed) {
+          setApiInfo((current) =>
+            current
+              ? {
+                  ...current,
+                  running: false,
+                  initializing: false,
+                  lastError: error instanceof Error ? error.message : String(error)
+                }
+              : null
+          )
+        }
       }
     }
 

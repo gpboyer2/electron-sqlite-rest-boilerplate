@@ -159,11 +159,11 @@ export function ProcessesPage() {
         <div className="flex items-center gap-3">
           <Activity className="h-6 w-6" />
           <div>
-            <h1 className="text-2xl font-bold">{isEn ? 'Process Management' : '进程管理'}</h1>
+            <h1 className="text-2xl font-bold">{isEn ? 'CRUD Demo' : 'CRUD 示例'}</h1>
             <p className="text-sm text-muted-foreground">
               {isEn
-                ? 'Query, create, update and delete all hit /api/process/*.'
-                : '查询、创建、更新、删除全部直连 /api/process/*。'}
+                ? 'This page demonstrates a standard CRUD screen on top of /api/process/*.'
+                : '这个页面演示的是一个标准 CRUD 模板页面，底层接口来自 /api/process/*。'}
             </p>
           </div>
         </div>
@@ -198,7 +198,7 @@ export function ProcessesPage() {
       <div className="grid gap-4 xl:grid-cols-[0.95fr,1.05fr]">
         <Card>
           <CardHeader>
-            <CardTitle>{isEn ? 'Create or Update Process' : '创建或更新进程'}</CardTitle>
+            <CardTitle>{isEn ? 'Create or Update Record' : '创建或更新记录'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
@@ -269,7 +269,7 @@ export function ProcessesPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{isEn ? 'Process List' : '进程列表'}</CardTitle>
+            <CardTitle>{isEn ? 'Record List' : '记录列表'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="relative">

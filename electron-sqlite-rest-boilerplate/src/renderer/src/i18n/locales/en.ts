@@ -42,9 +42,9 @@ const en = {
 
   // Navigation
   nav: {
-    home: 'Home',
-    processes: 'Processes',
-    settings: 'Settings',
+    home: 'Dashboard',
+    processes: 'CRUD Demo',
+    auth: 'Auth Demo',
     about: 'About'
   },
 

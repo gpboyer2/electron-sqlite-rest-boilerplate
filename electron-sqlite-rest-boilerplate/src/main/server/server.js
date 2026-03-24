@@ -1,7 +1,7 @@
 /**
  * REST API 服务器入口
  *
- * 【强制约束】本项目必须使用 better-sqlite3，禁止使用 Sequelize 或其他 ORM
+ * 【强制约束】本项目必须使用 better-sqlite3 + drizzle-orm/better-sqlite3
  *
  * 基于 Express 的 REST API 服务器，提供：
  * - 系统监控接口（/api/system）
@@ -29,8 +29,7 @@ const logger = log4js.getLogger('default')
 const isEmbedded = process.env.ELECTRON_EMBEDDED === 'true'
 
 /**
- * 【强制约束】必须使用 better-sqlite3 创建数据库连接
- * 禁止使用：sequelize, sqlite3, knex 等其他库
+ * 【强制约束】数据库层必须使用 better-sqlite3 驱动，并通过 drizzle-orm/better-sqlite3 暴露 ORM API
  */
 const { testConnection, closeDatabase } = require('./database/database')
 
@@ -63,15 +62,8 @@ const { VITE_API_HOST, VITE_API_PORT } = require('./etc/config')
 const apiPrefix = '/api'
 let startupPromise = null
 
-// 路由配置表：路径前缀、路由模块、描述
-const routeConfigList = [
-  { prefix: '/health', router: require('./routes/healthRouter'), desc: '健康检查接口' },
-  { prefix: '/dashboard', router: require('./routes/dashboardRouter'), desc: '仪表盘接口' },
-  { prefix: '/system', router: require('./routes/systemRouter'), desc: '系统监控接口' },
-  { prefix: '/process', router: require('./routes/processRouter'), desc: '进程管理接口' },
-  { prefix: '/settings', router: require('./routes/settingsRouter'), desc: '设置接口' },
-  { prefix: '/about', router: require('./routes/aboutRouter'), desc: '关于接口' }
-]
+// 轻量 MVC 路由配置表：由 module router -> controller -> service -> repository 组成
+const routeConfigList = require('./modules')
 
 // 全局中间件
 app.use(bodyParser.json())

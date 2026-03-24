@@ -46,7 +46,7 @@ const accessHandler = (req, res, next) => {
   res.send = function (data) {
     // 记录响应状态码
     httpApiLogger.info(
-      `[${new Date().toLocaleString()}] - ${req.method} ${req.url} - Response: ${res.status_code}`
+      `[${new Date().toLocaleString()}] - ${req.method} ${req.url} - Response: ${res.statusCode}`
     );
     // 调用原始的 res.send 方法发送响应
     originalSend.call(this, data);
